@@ -1,7 +1,8 @@
-db.sqlite3
-djangotypoenv/
-uwsgi.log
-uwsgi_serv.pid
-typometricsapp/errorlog/
-typometricsapp/__pycache__/
-djangotypo/__pycache__/
+__pycache__/
+.git/
+# exclude everything
+*ud-treebanks-v*/*
+
+# exception to the rule
+!sud-treebanks-v2.6/.gitkeep  
+!ud-treebanks-v2.7/.gitkeep  
