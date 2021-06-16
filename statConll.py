@@ -124,7 +124,7 @@ udfuncs="nsubj obj iobj csubj ccomp xcomp obl vocative expl dislocated advcl adv
 sudfuncs="appos vocative expl dislocated discourse dep mot comp subj mod unk udep det clf case conj cc fixed flat compound list parataxis orphan goeswith reparandum punct root dep".split() # dep_SUD FAIL_advcl _
 
 thesefuncs = sudfuncs
-thesefuncs = udfuncs
+#thesefuncs = udfuncs
 
 verbose=True
 #verbose=False
@@ -150,13 +150,16 @@ def makeStatsOneThread(info):
 	
 	# 1. collects all the information from the trees:
 	for conllfile in langConllFiles[lcode]: # for each conllfile for the current language
+		print('\n',conllfile, '\n')
 		if verbose: print('processing',conllfile, multiprocessing.current_process())
 		trees = conll.conllFile2trees(conllfile)
 		langcode=lcode.split("_")[0]
 		if verbose: print("doing",len(trees),"trees of",lcode,langNames[langcode], multiprocessing.current_process()) # [:2]
 		titi=time.time()
-		for tree in trees:
-			for ni,node in tree.items():
+		for tree in trees:  #current sentence
+			#print("\n \nin current tree \n")
+			for ni,node in tree.items(): #id, info(t,lemma tag etc) for current token
+				#print("\n ni = ", ni, "\n node = ", node)
 				#skip=False
 				tag = node["tag"].strip()
 				if tag in udcats:
@@ -164,17 +167,27 @@ def makeStatsOneThread(info):
 					typesDics["cat"]["lang"][lcode][tag]=typesDics["cat"]["lang"][lcode].get(tag,0)+1
 				else:
 					tag="X"
-				for gi in node["gov"]:
-					func=node["gov"][gi]
+				for gi in node["gov"]:#root id of current sentence
+					func=node["gov"][gi] #DEPREL
+
+					#print("\n in node gov : \n gi = ",gi, "\n node gov gi = ", func )
+					#print("ni-gi = ", ni-gi) #position of current token in relation to the root
 					syntfunc = func.split("@")[0]
-					simpfunc=relationsplit.split(func)[0]
+
+					#print("\n syntfunc = ", syntfunc)
+					simpfunc=relationsplit.split(func)[0] #DEPREL
+
+					#print("\n func after split: simpfunc =", simpfunc)
+					#print("\n split results after 0 = ",relationsplit.split(func))
 					funcs = [simpfunc]
-					if syntfunc!=simpfunc:
+					if syntfunc!=simpfunc: #difference between syntfunc & simpfunc?
 						funcs+=[syntfunc]
 					if simpfunc in skipFuncs:
 						break
 					if simpfunc not in thesefuncs: #udfuncs+sudfuncs:
-						print("weird simple function",simpfunc)
+						print("\nweird simple function",simpfunc)
+						#print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
+						
 						errorfile.write('\t'.join([simpfunc,conllfile])+'\n')
 						#skip=True
 						break
@@ -187,6 +200,9 @@ def makeStatsOneThread(info):
 							typesDics["abs-f-dist-noroot"]["lang"][lcode][f]=typesDics["abs-f-dist-noroot"]["lang"][lcode].get(f,[])+[abs(ni-gi)]
 						
 						gc = tree.get(gi,{"tag":"ROOT"})["tag"].strip()
+
+						#print("\n tree gi tag root = ", tree.get(gi,{"tag":"ROOT"})) #info(t,lemma tag etc) of root
+						#print("\n gc =", gc)
 						if gc not in udcats: gc="X"
 						
 						fc = f+"-"+tag
@@ -260,7 +276,7 @@ def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat
 	ti = time.time()
 	Path(analysisfolder).mkdir(parents=True, exist_ok=True)
 
-	pool = multiprocessing.Pool(psutil.cpu_count()) # *2 -1
+	#pool = multiprocessing.Pool(psutil.cpu_count()) # *2 -1
 	typesDics={} # global dic: {"func" -> { "all":{ "subj":234, ... }, "lang":{"en":{"subj":33, ...}} }
 	for ty in types:
 		typesDics[ty]={}
@@ -274,9 +290,12 @@ def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat
 	#qsdf
 	pbar = tqdm.tqdm(total=len(infotodo))
 	results = []
-	for res in pool.imap_unordered(makeStatsOneThread, infotodo):
-		pbar.update()
-		results.append(res)
+	
+	with multiprocessing.Pool(psutil.cpu_count()) as pool:
+		for res in pool.imap_unordered(makeStatsOneThread, infotodo):
+			pbar.update()
+			results.append(res)
+			
 	print("it took",time.time()-ti,"seconds")
 	print("\n\n\n====================== finished reading in. \n combining...")
 	for tdi in results:
@@ -394,23 +413,48 @@ def simpleStat(tree):
 	#print("it took",time.time()-ti,"seconds =",(time.time()-ti)/60,"minutes in total")
 
 
+def addfilePrefix(foldername, prefix):
+	for dirpath, dirnames, files in os.walk(foldername):
+		for f in files:
+			os.rename(dirpath + f, dirpath + prefix + "_"+f)
 
-def maincomputation():
-	conlldatafolder = "ud-treebanks-v2.7"
+def maincomputation(conlldatafolder):
+	#conlldatafolder = "sud-treebanks-v2.7"
 	analysisfolder = conlldatafolder + '-analysis'
-	langConllFiles=getAllConllFiles(conlldatafolder, groupByLanguage=True)
+
+	#for folder sud-treebanks-v2.7/SUD_Naija-NSC, with  Naija (code: pcm)
+	#addfilePrefix("sud-treebanks-v2.7/SUD_Naija-NSC/", 'pcm')
+	
+	#dict in which key = abbr of langue name, val=relevant files' names 
+	langConllFiles=getAllConllFiles(conlldatafolder, groupByLanguage=True) 
+	
+	if len(langConllFiles) == 0:
+		print("empty folder error ", langConllFiles, "\n")
+		return
+	
 	for code in langConllFiles:
 		if code not in langNames : 
-			print("can't find", code,langConllFiles[code])
+			print("can't find", code, langConllFiles[code]) #ajouter dans les tsv
 			qsdf
 		if ' ' in langConllFiles[code]:
 			print('consider replacing this language name:',code,langConllFiles[code])
 			qsdf
 		#print(code,langNames[code])
+	
 	makeStatsThreaded(langConllFiles, skipFuncs=['root'], skipLangs=[], analysisfolder=analysisfolder)
 	
 	
 if __name__ == "__main__":
+	#multiprocessing.set_start_method("spawn")
+
+	#check if thesefuncs = udfuncs or sudfuncs to adapte with input folder
+
+	#maincomputation("sud-treebanks-v2.7")
+	#maincomputation("ud-treebanks-v2.8")
+	#maincomputation("weirdfct")
+	maincomputation("cs_pdt")
+	maincomputation("de-hdt")
+	maincomputation("ja_bccwj")
+	maincomputation("ru_syntagrus")
 	
-	maincomputation()
 	#langConllFiles = {a:v for a,v in langConllFiles.iteritems() if "fr" in a}
