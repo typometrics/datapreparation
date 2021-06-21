@@ -23,7 +23,8 @@ backend<br/>
 frontend: vue + quasar<br/>
 read the README.md in 3)
 
-3 boot files added
+3 boot files added: axios.js, backend.js,i18n.js
+
 <br/>
 plot data prepared and sent by django
   
