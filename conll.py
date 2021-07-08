@@ -108,7 +108,7 @@ class Tree(dict):
 		for i in self:
 			for g,f in self[i].get("gov",{}).items():
 				if f in exclude: continue
-				if g>0: self[g]["kids"][i]=f
+				if g>0: self[g]["kids"][i]=f #g = HEAD, i = ID, f = DEPREL 
 				else: self.rootnode=i
 					
 				
@@ -119,7 +119,7 @@ class Tree(dict):
 		"""
 		self.addkids(exclude)
 		for i in self:
-			self[i]['span'] = sorted(self.span(i))
+			self[i]['span'] = sorted(self.span(i)) #all direct & indirect dependents of node i
 			
 	def span(self, i):
 		"""
@@ -166,7 +166,58 @@ class Tree(dict):
 			for i, node in correctTree.items():
 				self[i]=correctTree[i]
 	
+	#tree height
+	def __headOfList(self,idlist):
+		hdlist = []
+		if len(idlist):
+			for i in idlist:
+				for hd in self[i]['gov'].keys():
+					if hd != -1:	hdlist.append(hd)  #if i not an empty node
+		return hdlist
+	
+	def __haveCousin(self, hdset):
+		hdset.remove(0) #we are going to find head of headset while 0 haven't head
+		#find head of headset, an id can appears more than once if there are multiple heads in one stage 
+		hdofhdList = self.__headOfList(hdset)
+		hdofhdSet = set(hdofhdList) #eliminate duplication
+		return len(hdofhdList)!= len(set(hdofhdSet)), hdofhdSet
+
+	def treeHeight(self):
+		"""
+		find tree height with different head id. For each 'stage' of tree, we compte only one head. 
+		if one node is a head, it means there is one more stage for its son (dependent). 
+		while in one stage, maybe there are more than one head(who has branche), so we need delete the others
+		"""
+		height = -1
+		headset = set(self.__headOfList(self.keys())) #all head id in current tree
+		#print("head id of current tree:", headset)
 		
+		branch = 0
+		cousin = True #if there are cousins in headset
+		while(cousin):
+			cousin, headset = self.__haveCousin(headset) 
+			branch += 1
+			#print("\nheadset == ", headset,"\nbranch: ", branch)
+			
+			if(not cousin):
+				height = len(headset)+ branch
+		#print("treeHeight = ",height)
+		return height
+
+	def __getHeadId(self,idx):
+		for hd in tree[idx]['gov'].keys():#hd is unique for each node
+			return hd
+	
+	#dep length
+	#for one node, find the depth by track back to the root
+	def depLength(self, nodeId):
+		length = 1 #every node have at least length 1 to the node 0
+		head = self.__getHeadId(nodeId)
+		while(head != 0):
+			idx = head
+			head = self.__getHeadId(idx)
+			length += 1
+		return length
 		
 	def oldreplaceNodes(self, idsequence, instree, headid=0, hook=1):
 		"""
@@ -377,7 +428,9 @@ def conll2tree(conllstring):
 					newf={'id':nr,'t': t,'lemma': lemma, 'tag': tag, 'xpos': xpos, 'gov':{govid: rel}, 'egov':egov, 'misc': misc}
 					if "=" in features:
 						mf=dict([(av.split("=")[0],av.split("=")[-1]) for av in features.split("|")])
+						#print("\n features :", mf)
 						newf=update(mf,newf)
+						#print("new f ", newf)
 					if "=" in misc:
 						mf=dict([(av.split("=")[0],av.split("=")[-1]) for av in misc.split("|")])
 						newf=update(mf,newf)
@@ -557,16 +610,23 @@ def textFiles2emptyConllFiles(infolder, outfolder):
 if __name__ == "__main__":
 	pass
 	#trees = conllFile2trees("sudcorrected/ONI_26_News-Highlights_MG.conllu")
-	trees = conllFile2trees("/home/kim/Downloads/ABJ_GWA_03_Cost-Of-Living-In-Abuja_MG.conllu")
+	#trees = conllFile2trees("/home/kim/Downloads/ABJ_GWA_03_Cost-Of-Living-In-Abuja_MG.conllu")
+	trees = conllFile2trees("/home/sylviepeng/typometrics/datapreparation/sud-treebanks-v2.8/SUD_Beja-NSC/bej_BEJ_MV_NARR_01_shelter.conllu")
 	print(len(trees))
 	print(trees[2].conllu())
+
+	
 	#replaceNodesByTree(idsequence, instree, hook=1, headid=0, keepExtpos=True)
 	#trees[0].replaceNodes([2,3], 2, {1:{'t':'oh'}})
 	#trees[0].replaceNodes([2,3], 2, {1:{'t':'oh'},2:{'t':'là','gov':{1:'mylink'}},3:{'t':'làaa','gov':{2:'mylink'}}})
 	#trees[0].replaceNodes([2,3], 2, ["oh", "là", "là"])
-	trees[2].replaceNodesByTree([2,3], {}, 2)
+
+	#trees[2].replaceNodesByTree([2,3], {}, 2) enleve # 
+
 	#trees[0].replaceNodes([2,3], 2, "oh là là")
-	print(trees[2])
+
+	#print(trees[2]) enleve # 
+
 	#print(trees[0].sentencefeatures)
 	#trees[0].correctNumbering()
 	#print(trees[0].conllu())
