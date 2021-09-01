@@ -55,3 +55,6 @@ dfs = dfsUD #928 minnonzero = 60
 * open *distance.py* in main fct, line321, change version as **ud**
 * open *distanceMarry.py* in main fct, line288, change version as **ud**
 
+#### other
+some results such as mappings of 1D graphs and some draft notebook are stored at 
+https://drive.google.com/drive/folders/11o_3SyekXEpm3czrkoawwqreDW4fNClS?usp=sharing
