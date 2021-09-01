@@ -2,16 +2,18 @@
 
 STEP 0<br/>
 * for language distribution and DTW:
-
+```bash
 python3 distance.py
-
+```
 * if distance.py doesn't work, try:
-python3 distance1.py<br/>
-
+```bash
+python3 distance1.py
+```
 
 * for stable matching 
-
+```bash
 python3 distanceMarry.py
+```
 <br/>
 
 STEP 1<br/>
@@ -20,9 +22,11 @@ STEP 1<br/>
 to change it as 'menzerath' or 'direction'
 
 * open *distance.py* in main fct, line329-331, change the comment '#' of group <br/>
-   group = 'distance' <br/>
-    #group = 'direction'<br/>
-    #group = 'menzerath'<br/>
+```bash
+   group = 'distance' 
+    #group = 'direction'
+    #group = 'menzerath'
+```
 * open *distanceMarry.py* in main fct, line293-295, change the comment '#' of group 
 
 
@@ -31,20 +35,22 @@ SUD as default version
 
 UD:
 * open *tsv2json.py*, at line 100-104, <br/>
-
-dfsSUD = getRawData(sudFolder)<br/>
-#dfsUD = getRawData(udFolder, sud = False)<br/>
-dfs = dfsSUD #1162 min = 60 <br/>
-#dfs = dfsUD #928 minnonzero = 60<br/>
+```bash
+dfsSUD = getRawData(sudFolder)
+#dfsUD = getRawData(udFolder, sud = False)
+dfs = dfsSUD #1162 min = 60 
+#dfs = dfsUD #928 minnonzero = 60
+```
 <br/>
 put them as follows:
+```bash
+#dfsSUD = getRawData(sudFolder)
+dfsUD = getRawData(udFolder, sud = False)
 
-#dfsSUD = getRawData(sudFolder)<br/>
-dfsUD = getRawData(udFolder, sud = False)<br/>
+#dfs = dfsSUD #1162 min = 60 
+dfs = dfsUD #928 minnonzero = 60 
+```
 
-#dfs = dfsSUD #1162 min = 60 <br/>
-dfs = dfsUD #928 minnonzero = 60 <br/>
-
-* open *distance.py* in main fct, line321, change version as 'ud'
-* open *distanceMarry.py* in main fct, line288, change version as 'ud'
+* open *distance.py* in main fct, line321, change version as **ud**
+* open *distanceMarry.py* in main fct, line288, change version as **ud**
 
