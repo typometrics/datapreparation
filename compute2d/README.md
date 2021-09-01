@@ -42,7 +42,8 @@ dfs = dfsSUD #1162 min = 60
 #dfs = dfsUD #928 minnonzero = 60
 ```
 <br/>
-put them as follows:
+put them as follows:<br/>
+
 ```bash
 #dfsSUD = getRawData(sudFolder)
 dfsUD = getRawData(udFolder, sud = False)
