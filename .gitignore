@@ -2,7 +2,9 @@ __pycache__/
 .git/
 # exclude everything
 *ud-treebanks-v*/*
+figures/*
 
 # exception to the rule
 !sud-treebanks-v2.6/.gitkeep  
 !ud-treebanks-v2.7/.gitkeep  
+figures/unidimscatter-tree.svg
