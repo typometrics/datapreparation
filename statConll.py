@@ -62,17 +62,22 @@ def getAllConllFilesGroup(basefolder):
 	{"en":["/dqsdf/en.partut.conllu", ...] }
 	"""
     langConllFiles = {}
-    doc_list = [d for d in sorted(os.listdir(basefolder)) if d[:3]=='SUD']
+    doc_list = [d for d in sorted(os.listdir(basefolder))]
     for doc_name in doc_list:
         conll_ls = [os.path.join( basefolder, doc_name,f) for f in os.listdir(os.path.join(basefolder, doc_name)) if f.endswith(".conllu") and "not-to-release" not in doc_name]
         if conll_ls:
-            la = os.path.basename(conll_ls[0]).split('_', 1)[0]
-            la = 'fr' if la =='ParisStories' else la
+            la = os.path.basename(conll_ls[0]).split('_', 1)[0].lower()
+            la = 'fr' if la =='ParisStories'.lower() else la
             la = 'pcm' if doc_name == 'SUD_Naija-NSC' else la
             la = 'zh' if doc_name == 'SUD_Chinese-PatentChar' else la
             langConllFiles[la] = langConllFiles.get(la, []) + conll_ls
     return langConllFiles
 
+
+def checkLangCode(langConllFiles):
+	to_add = [la for la in langConllFiles if la not in langNames ]
+	print('Language to add:', to_add)
+	assert(len(to_add) == 0)
 
 def getAllConllFiles(basefolder, groupByLanguage=True):
 	"""
@@ -183,6 +188,7 @@ def makeStatsOneThread(info):
 			
 			for ni,node in tree.items(): #id, info(t,lemma tag etc) for current token
 				# POS tag = ExtPos if ExPos exist else upos
+
 				tag = node.get('ExtPos', node["tag"] ).strip()
 				if tag in udcats:
 					typesDics["cat"]["all"][tag]=typesDics["cat"]["all"].get(tag,0)+1
@@ -203,7 +209,7 @@ def makeStatsOneThread(info):
 						break
 					if simpfunc not in thesefuncs: #udfuncs+sudfuncs:
 						print("\nweird simple function",simpfunc,"    id == ", ni)
-						print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
+						# print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
 						errorfile.write('\t'.join([simpfunc,conllfile])+'\n')
 						#skip=True
 						break
@@ -482,6 +488,7 @@ if __name__ == "__main__":
 	#dict in which key = abbr of langue name, val=relevant files' names 
 	conlldatafolder = "sud-treebanks-v2.11"
 	langConllFiles = getAllConllFiles(conlldatafolder, groupByLanguage=True) 
+	checkLangCode(langConllFiles)
 	langList = sorted(langConllFiles.keys())
 	analysisfolder = conlldatafolder + '-analysis'
 
