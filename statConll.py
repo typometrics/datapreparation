@@ -24,9 +24,10 @@
 # pip3 install psutil tqdm pandas
 
 #import datetime, codecs, time, sys, os, glob, re, numpy, multiprocessing, psutil, tqdm
-import time, sys, os, glob, re, multiprocessing, psutil, tqdm
+import time, sys, os, re, multiprocessing, psutil, tqdm
 from pathlib import Path
 import pandas as pd
+import numpy as np 
 
 import conll
 
@@ -52,7 +53,26 @@ def readInLanguageNames():
 	return langNames, langnameGroup
 
 langNames, langnameGroup = readInLanguageNames()
-# print(langNames)
+
+
+def getAllConllFilesGroup(basefolder):
+    """
+	for a given basefolder, 
+	gives back a dictionary code -> list of files under the code
+	{"en":["/dqsdf/en.partut.conllu", ...] }
+	"""
+    langConllFiles = {}
+    doc_list = [d for d in sorted(os.listdir(basefolder)) if d[:3]=='SUD']
+    for doc_name in doc_list:
+        conll_ls = [os.path.join( basefolder, doc_name,f) for f in os.listdir(os.path.join(basefolder, doc_name)) if f.endswith(".conllu") and "not-to-release" not in doc_name]
+        if conll_ls:
+            la = os.path.basename(conll_ls[0]).split('_', 1)[0]
+            la = 'fr' if la =='ParisStories' else la
+            la = 'pcm' if doc_name == 'SUD_Naija-NSC' else la
+            la = 'zh' if doc_name == 'SUD_Chinese-PatentChar' else la
+            langConllFiles[la] = langConllFiles.get(la, []) + conll_ls
+    return langConllFiles
+
 
 def getAllConllFiles(basefolder, groupByLanguage=True):
 	"""
@@ -60,35 +80,28 @@ def getAllConllFiles(basefolder, groupByLanguage=True):
 	gives back a dictionary code -> list of files under the code
 	{"en":["/dqsdf/en.partut.conllu", ...] }
 	"""
+	if groupByLanguage:
+		return getAllConllFilesGroup(basefolder)
 	langConllFiles={}
 	for dirpath, dirnames, files in os.walk(basefolder):
 		for f in files:
 			if f.endswith(".conllu") and "not-to-release" not in dirpath:
-				if groupByLanguage:	lcode=re.split(r"\W|_",f)[0] # now all different treebanks for iso-639-3english are under 'en'
-				else:			lcode=re.split(r"\-",f)[0] # now the codes are for example 'en', 'en_partut', 'en_lines'				
+				# if groupByLanguage:	lcode=re.split(r"\W|_",f)[0] # now all different treebanks for iso-639-3english are under 'en'	
+				lcode=re.split(r"\-",f)[0] # now the codes are for example 'en', 'en_partut', 'en_lines'				
 				#if lcode in langConllFiles: print lcode,f
 				langConllFiles[lcode]=langConllFiles.get(lcode,[])+[os.path.join(dirpath,f)]
 	#print langConllFiles
 	return langConllFiles
 
-relationsplit = re.compile(':|@')
+relationsplit = re.compile(r'[:|@|$]')
+# relationsplit = re.compile(r'[:|$]')
 
 
 # TODO: add this combination
  #elif x_type == "nominal":
-		#data = df[df["headpos"].isin(["NOUN", "PROPN"])]
-	#elif x_type == "content":
-		#data = df[df["headpos"].isin(["NOUN", "PROPN", "ADJ", "ADV", "VERB"])]
-
-
-
-
-
-
-
-
-
-
+        #data = df[df["headpos"].isin(["NOUN", "PROPN"])]
+    #elif x_type == "content":
+        #data = df[df["headpos"].isin(["NOUN", "PROPN", "ADJ", "ADV", "VERB"])]
 
 
 
@@ -103,6 +116,7 @@ def average(lis, rounding):
 types=[ "cat",
 	"f",
 	"f-dist",
+	"f-dist-abs",
 	"f-dist-noroot",
 	"cfc",
 	"cf",
@@ -116,7 +130,7 @@ types=[ "cat",
 	"height"]
 
 
-distancetypes={"f-dist":"f","f-dist-noroot":"f","funcTIMESdist":"f", "cfc-dist":"cfc", "cf-dist":"cf", "abs-f-dist-noroot":"f"} # pointing to the corresponding frequency type
+distancetypes={"f-dist":"f", "f-dist-abs": "f","f-dist-noroot":"f","funcTIMESdist":"f", "cfc-dist":"cfc", "cf-dist":"cf", "abs-f-dist-noroot":"f"} # pointing to the corresponding frequency type
 distancetypes={t:distancetypes[t] for t in distancetypes if t in types}
 sdtypes={"f-dist-SD":"f-dist","f-dist-noroot-SD":"f-dist-noroot"}
 sdtypes={t:sdtypes[t] for t in sdtypes if t in types}
@@ -124,17 +138,15 @@ multypes={"funcTIMESdist":"f", "positive-direction":"f", "posdircfc":"cfc", "pos
 multypes={t:multypes[t] for t in multypes if t in types}
 
 udcats="ADJ ADP PUNCT ADV AUX SYM INTJ CCONJ X NOUN DET PROPN NUM VERB PART PRON SCONJ".split()
-udlexcats="ADJ PUNCT ADV SYM INTJ X NOUN PROPN NUM VERB PRON".split()
-udfuncats="ADP AUX CCONJ DET PART SCONJ".split()
 
 udfuncs="nsubj obj iobj csubj ccomp xcomp obl vocative expl dislocated advcl advmod discourse aux cop mark nmod appos nummod acl amod det clf case conj cc fixed flat compound list parataxis orphan goeswith reparandum punct root dep".split()
-sudfuncs="appos vocative expl dislocated discourse dep mot comp subj mod unk udep det clf case conj cc fixed flat compound list parataxis orphan goeswith reparandum punct root dep aff".split() # dep_SUD FAIL_advcl _ #add aff for sud2.8/beja
+sudfuncs="appos vocative expl dislocated discourse dep mot comp subj mod unk udep det clf case conj cc fixed flat compound list parataxis orphan goeswith reparandum punct root aff".split() # dep_SUD FAIL_advcl _ #add aff for sud2.8/beja
 
 #thesefuncs = sudfuncs
 #thesefuncs = udfuncs
 
 verbose=True
-verbose=False
+#verbose=False
 
 errorfile = open("errors.tsv",'w')
 
@@ -167,14 +179,11 @@ def makeStatsOneThread(info):
 		
 
 		for tree in trees:  #current sentence
-			#print("\n \nin current tree \n")
-			#print("\n\n",tree.conllu())
 			typesDics["height"]["lang"][lcode]["treeHeight"] = typesDics["height"]["lang"][lcode].get("treeHeight",[])+[tree.treeHeight()]
-
+			
 			for ni,node in tree.items(): #id, info(t,lemma tag etc) for current token
-				#print("\n ni = ", ni, "\n node = ", node)
-				#skip=False
-				tag = node["tag"].strip()
+				# POS tag = ExtPos if ExPos exist else upos
+				tag = node.get('ExtPos', node["tag"] ).strip()
 				if tag in udcats:
 					typesDics["cat"]["all"][tag]=typesDics["cat"]["all"].get(tag,0)+1
 					typesDics["cat"]["lang"][lcode][tag]=typesDics["cat"]["lang"][lcode].get(tag,0)+1
@@ -182,40 +191,38 @@ def makeStatsOneThread(info):
 					tag="X"
 				for gi in node["gov"]:#root id of current sentence
 					func=node["gov"][gi] #DEPREL
-
 					#print("\n in node gov : \n gi = ",gi, "\n node gov gi = ", func )
 					#print("ni-gi = ", ni-gi) #position of current token in relation to the root
 					syntfunc = func.split("@")[0]
 
-					#print("\n syntfunc = ", syntfunc)
 					simpfunc=relationsplit.split(func)[0] #DEPREL
-
-					#print("\n func after split: simpfunc =", simpfunc)
-					#print("\n split results after 0 = ",relationsplit.split(func))
 					funcs = [simpfunc]
 					if syntfunc!=simpfunc: #difference between syntfunc & simpfunc?
 						funcs+=[syntfunc]
 					if simpfunc in skipFuncs:
 						break
 					if simpfunc not in thesefuncs: #udfuncs+sudfuncs:
-						print("\nweird simple function",simpfunc,"    id == ", ni, '\n')
-						#print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
-						
+						print("\nweird simple function",simpfunc,"    id == ", ni)
+						print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
 						errorfile.write('\t'.join([simpfunc,conllfile])+'\n')
 						#skip=True
 						break
 					for f in funcs:
 						#typesDics["func"]["lang"][lcode][func]=typesDics["func"]["lang"][lcode].get(func,0)+1
 						typesDics["f"]["lang"][lcode][f]=typesDics["f"]["lang"][lcode].get(f,0)+1
+
 						typesDics["f-dist"]["lang"][lcode][f]=typesDics["f-dist"]["lang"][lcode].get(f,[])+[ni-gi]
+						typesDics["f-dist-abs"]["lang"][lcode][f]=typesDics["f-dist-abs"]["lang"][lcode].get(f,[])+[abs(ni-gi)]
+
 						if gi: 
 							typesDics["f-dist-noroot"]["lang"][lcode][f]=typesDics["f-dist-noroot"]["lang"][lcode].get(f,[])+[ni-gi]
 							typesDics["abs-f-dist-noroot"]["lang"][lcode][f]=typesDics["abs-f-dist-noroot"]["lang"][lcode].get(f,[])+[abs(ni-gi)]
 						
-						gc = tree.get(gi,{"tag":"ROOT"})["tag"].strip()
+						# POS tag = ExtPos if ExPos exist else upos
+						gtok = tree.get(gi,{"tag":"ROOT"})
+						gc = gtok.get('ExtPos' , gtok["tag"]).strip() 
 
 						#print("\n tree gi tag root = ", tree.get(gi,{"tag":"ROOT"})) #info(t,lemma tag etc) of root
-						#print("\n gc =", gc)
 						if gc not in udcats: gc="X"
 						
 						fc = f+"-"+tag
@@ -229,7 +236,8 @@ def makeStatsOneThread(info):
 						typesDics["cf-dist"]["lang"][lcode][cf]=typesDics["cf-dist"]["lang"][lcode].get(cf,[])+[ni-gi]
 						#typesDics["func"]["all"][func]=None 
 						typesDics["f"]["all"][f]=None 
-						typesDics["f-dist"]["all"][f]=None 
+						typesDics["f-dist"]["all"][f]=None
+						typesDics["f-dist-abs"]["all"][f]=None
 						typesDics["cfc-dist"]["all"][cfc]=None
 						typesDics["cf-dist"]["all"][cf]=None
 						#typesDics["f-dist-SD"]["all"][f]=None 
@@ -244,8 +252,6 @@ def makeStatsOneThread(info):
 						typesDics["posdircfc"]["all"][cfc]=None
 						typesDics["posdircf"]["all"][cf]=None
 					
-				
-				
 				#if skip: continue
 				
 		if verbose: print("current speed:",int((time.time()-titi)/len(trees)*1000000),"seconds per mtrees of",langNames[langcode])
@@ -258,17 +264,19 @@ def makeStatsOneThread(info):
 	for f in sorted(typesDics["positive-direction"]["all"]): # average percentage of simple relations going to the right
 		dists = typesDics["f-dist"]["lang"][lcode].get(f,[])
 		if len(dists): posdir=100.0*len([d for d in dists if d>0])/len(dists)
-		else: posdir=-1
+		else: posdir= np.nan#-1
 		typesDics["positive-direction"]["lang"][lcode][f]=posdir
+
 	for cfc in sorted(typesDics["posdircfc"]["all"]): # average percentage of cfc going to the right
 		dists = typesDics["cfc-dist"]["lang"][lcode].get(cfc,[])
 		if len(dists): posdir=100.0*len([d for d in dists if d>0])/len(dists)
-		else: posdir=-1
+		else: posdir= np.nan #-1
 		typesDics["posdircfc"]["lang"][lcode][cfc]=posdir
+
 	for cf in sorted(typesDics["posdircf"]["all"]): # average percentage of cf going to the right
 		dists = typesDics["cf-dist"]["lang"][lcode].get(cf,[])
 		if len(dists): posdir=100.0*len([d for d in dists if d>0])/len(dists)
-		else: posdir=-1
+		else: posdir= np.nan #-1
 		typesDics["posdircf"]["lang"][lcode][cf]=posdir
 		
 	for ty in distancetypes: # compute average of distances. before: list of values, after: average
@@ -289,79 +297,7 @@ def makeStatsOneThread(info):
 	return typesDics
 
 
-def makeStatsOneThreadMinimal(info):
-	"""
-	computes minimal stats for one language
-	
-	"""
-	lcode, langConllFiles, skipFuncs, rounding = info
-	if verbose: 
-		print(lcode, "...")
-		print(multiprocessing.current_process())
-	
-	
-	typesDics={} # temp dico for each language: {"func"(type) ->  {"subj":33, ...}  } - later stored in combined typesDics[ty]["lang"][lcode] :::
-	types = ['funcGov']
-	for ty in types:
-		typesDics[ty]={}
-		typesDics[ty]["all"]={}
-		typesDics[ty]["lang"]={lcode:{}}
-	totaltoks = 0
-	totaltrees = 0
-	typesDics["funcGov"]["lang"][lcode]['rel']=typesDics["funcGov"]["lang"][lcode].get('rel',0)
-	typesDics["funcGov"]["lang"][lcode]['tree']=typesDics["funcGov"]["lang"][lcode].get('tree',0)
-	# 1. collects all the information from the trees:
-	for conllfile in langConllFiles[lcode]: # for each conllfile for the current language
-		if verbose: print('processing',conllfile, multiprocessing.current_process())
-		trees = conll.conllFile2trees(conllfile)
-		langcode=lcode.split("_")[0]
-		if verbose: print("doing",len(trees),"trees of",lcode,langNames[langcode], multiprocessing.current_process()) # [:2]
-		titi=time.time()
-		
-		for tree in trees:
-			treeOnlyLexGov = True
-			for ni,node in tree.items():
-				tag = node["tag"].strip()
-				for gi in node["gov"]:
-					gc = tree.get(gi,{"tag":"ROOT"})["tag"].strip()
-					gf = node["gov"][gi]
-					if gc in udfuncats and gf not in ['punct']:
-						treeOnlyLexGov = False
-						typesDics["funcGov"]["lang"][lcode]['rel']=typesDics["funcGov"]["lang"][lcode].get('rel',0)+1
-						if lcode in ['fr','en', 'de'] and len(tree)<10: #  or True
-							print(ni,gi,node["gov"][gi],tree)
-							
-			if treeOnlyLexGov == False:
-				typesDics["funcGov"]["lang"][lcode]['tree']=typesDics["funcGov"]["lang"][lcode].get('tree',0)+1
-				
-
-			totaltoks += len(tree)	
-						
-		totaltrees += len(trees)		
-		if verbose: print("current speed:",int((time.time()-titi)/len(trees)*1000000),"seconds per mtrees of",langNames[langcode])
-	
-	# print(typesDics)
-	
-	typesDics["funcGov"]["lang"][lcode]['rel']=typesDics["funcGov"]["lang"][lcode]['rel']/totaltoks*100
-	typesDics["funcGov"]["lang"][lcode]['tree']=typesDics["funcGov"]["lang"][lcode]['tree']/totaltrees*100
-	# print(typesDics)
-	
-	if verbose: print("____",lcode,"done",multiprocessing.current_process())
-	
-	#if len(typesDics["cat"]["lang"])>1: break # comment this out in order to analyze all languages	
-
-	return typesDics
-
-
-
-
-
-
-
-
-
-
-def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat','conj'], skipLangs=['kk','sa','ug','lt','be','cop','ta'], rounding=5, colons="langname", analysisfolder='.', minimal=False):
+def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat','conj'], skipLangs=['kk','sa','ug','lt','be','cop','ta'], rounding=5, colons="langname", analysisfolder='.'):
 	
 	ti = time.time()
 	Path(analysisfolder).mkdir(parents=True, exist_ok=True)
@@ -373,21 +309,13 @@ def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat
 		typesDics[ty]["all"]={}
 		typesDics[ty]["lang"]={}
 	
-	infotodo = [(lcode, langConllFiles, skipFuncs, rounding) for lcode in langConllFiles if lcode not in skipLangs]
+	infotodo = [(lcode, langConllFiles, skipFuncs, rounding) for lcode in langConllFiles.keys() if lcode not in skipLangs]
 	#for res in makeStatsOneThread(infotodo[0]): # test first
 		#print "______",res,"______" 
 	#print infotodo
 	#qsdf
 	pbar = tqdm.tqdm(total=len(infotodo))
 	results = []
-	# if minimal:
-	# 	for res in pool.imap_unordered(makeStatsOneThreadMinimal, infotodo):
-	# 		pbar.update()
-	# 		results.append(res)
-	# else:
-	# 	for res in pool.imap_unordered(makeStatsOneThread, infotodo):
-	# 		pbar.update()
-	# 		results.append(res)
 	
 	with multiprocessing.Pool(psutil.cpu_count()) as pool:
 		for res in pool.imap_unordered(makeStatsOneThread, infotodo):
@@ -407,45 +335,6 @@ def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat
 	specdic.update(sdtypes)
 	specdic.update(multypes)
 	
-
-	# if minimal:
-	# 	print(typesDics)
-	# 	tsvstr = ""
-	# 	realtypes = []
-	# 	for ty in typesDics:
-	# 		print(ty)
-	# 		if typesDics[ty] == {'all': {}, 'lang': {}}: continue
-	# 		with open(os.path.join(analysisfolder,ty+".tsv"),"w") as out:
-
-
-		
-	# 	out.write("\t".join(idcolon+sorted(typesDics[ty]["all"])+["total"])+"\n") # title line
-	# else:
-
-	
-	# if minimal: thesetypes = typesDics.keys()
-	# else: thesetypes = types
-	# for ty in thesetypes:
-	# 		print(ty)
-	# 		if minimal and typesDics[ty] == {'all': {}, 'lang': {}}: continue
-	# 		with open(os.path.join(analysisfolder,ty+".tsv"),"w") as out:
-	# 			if colons=="langname": idcolon=["name"]
-	# 			#elif colons=="langcode": idcolon=["lang"]
-	# 			else: idcolon=["lang","name"]
-	# 			if minimal:
-	# 				somelanguage = list(typesDics[ty]["lang"].keys())[0]
-	# 				out.write("\t".join(idcolon+sorted(typesDics[ty]["lang"][somelanguage]))+"\n") # title line
-	# 			else:
-	# 				out.write("\t".join(idcolon+sorted(typesDics[ty]["all"])+["total"])+"\n") # title line
-	# 			for lcode in sorted(langConllFiles): # for each language
-	# 				if lcode in typesDics[ty]["lang"]:
-	# 					langname=langNames[lcode.split("_")[0]]
-	# 					if colons=="langname": idcolon=[langname]
-	# 					else: idcolon=[lcode,langname]
-	# 				if minimal:
-	# 					out.write("\t".join(idcolon+[str(typesDics[ty]["lang"][lcode].get(x,0)) for x in sorted(typesDics[ty]["lang"][lcode])])+"\n")
-
-	# 				else:
 	for ty in types:
 		print(ty)
 		with open(os.path.join(analysisfolder,ty+".tsv"),"w") as out:
@@ -463,27 +352,16 @@ def makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat
 						# for each function: get number of times the simpfunc exists * average distance of this simpfunc
 						# add all that and divide by number of relations in total. total is not necessarily useful for sdtypes
 						total=sum([typesDics[specdic[ty]]["lang"][lcode].get(x,0)*typesDics[ty]["lang"][lcode].get(x,0) for x in sorted(typesDics[ty]["all"])])/sum(typesDics[specdic[ty]]["lang"][lcode].values())
-						out.write("\t".join(idcolon+[str(typesDics[ty]["lang"][lcode].get(x,0)) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
+
+						out.write("\t".join(idcolon+[str(typesDics[ty]["lang"][lcode].get(x,float('nan'))) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
 					elif ty == "height": #average tree height of each language
-						height = str(typesDics[ty]["lang"][lcode].get("treeHeight",0))
-						out.write("\t".join(idcolon+ [height, height])+"\n")	
+						height = str(typesDics[ty]["lang"][lcode].get("treeHeight", float('nan')))
+						total = height #there is only a measure "height" in treeHeight so total == height
+						out.write("\t".join(idcolon+ [height, total])+"\n")	
 					else:# frequencies (relative frequencies because divided by total number of links)
-						#print("\n\nother ty ",ty)
-						#print(typesDics[ty]["lang"][lcode].values())
-						#print("key and value\n",typesDics[ty]["lang"][lcode])
 						total=sum(typesDics[ty]["lang"][lcode].values())
-						out.write("\t".join(idcolon+[str(round(typesDics[ty]["lang"][lcode].get(x,0)*1.0/total,rounding)) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
+						out.write("\t".join(idcolon+[str(round(typesDics[ty]["lang"][lcode].get(x,float('nan'))*1.0/total,rounding)) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
 					
-						if ty in specdic: # distances are already averages, they are written as such. only the "total" is complicated:
-							# total: rather average direction/distance of functions. to compute it:
-							# for each function: get number of times the simpfunc exists * average distance of this simpfunc
-							# add all that and divide by number of relations in total. total is not necessarily useful for sdtypes
-							total=sum([typesDics[specdic[ty]]["lang"][lcode].get(x,0)*typesDics[ty]["lang"][lcode].get(x,0) for x in sorted(typesDics[ty]["all"])])/sum(typesDics[specdic[ty]]["lang"][lcode].values())
-							out.write("\t".join(idcolon+[str(typesDics[ty]["lang"][lcode].get(x,0)) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
-						else:# frequencies (relative frequencies because divided by total number of links)
-							total=sum(typesDics[ty]["lang"][lcode].values())
-							out.write("\t".join(idcolon+[str(round(typesDics[ty]["lang"][lcode].get(x,0)*1.0/total,rounding)) for x in sorted(typesDics[ty]["all"])]+[str(total)])+"\n")
-							
 	print("it took",time.time()-ti,"seconds =",(time.time()-ti)/60,"minutes",(time.time()-ti)/60/60,"hours in total")
 
 
@@ -571,44 +449,24 @@ def addfilePrefix(foldername, prefix):
 		for f in files:
 			os.rename(dirpath + f, dirpath + prefix + "_"+f)
 
-def maincomputation29():
-	conlldatafolder = "ud-treebanks-v2.9"
-	analysisfolder = conlldatafolder + '-analysis'
-	langConllFiles=getAllConllFiles(conlldatafolder, groupByLanguage=True)
-	# print(langConllFiles)
-	for code in langConllFiles:
-		if code not in langNames : 
-			print("can't find", code,langConllFiles[code])
-			qsdf
-
-def maincomputation(conlldatafolder, version = ""):
-	#conlldatafolder = "sud-treebanks-v2.7"
-	analysisfolder = conlldatafolder + '-analysis'
-
-	#for folder SUD_Naija-NSC in sudv2.7 & sudv2.8, with  Naija (code: pcm)
-	#addfilePrefix("sud-treebanks-v2.8/SUD_Naija-NSC/", 'pcm') #run only once
-	#addfilePrefix("sud-treebanks-v2.8/SUD_Beja-NSC/", 'bej') #run only once
-	
-	#dict in which key = abbr of langue name, val=relevant files' names 
-	langConllFiles=getAllConllFiles(conlldatafolder, groupByLanguage=True) 
-	
+def maincomputation(analysisfolder, langConllFiles):
+	""" langCode2compute must be part of langConllFiles.keys() """
+	# analysisfolder = conlldatafolder + '-analysis'
 	if len(langConllFiles) == 0:
 		print("empty folder error ", langConllFiles, "\n")
 		return
 	
-	for code in langConllFiles:
+	for code in langConllFiles.keys():
 		if code not in langNames : 
 			print("can't find", code, langConllFiles[code]) #ajouter dans les tsv
-			#qsdf
 		if ' ' in langConllFiles[code]:
 			print('consider replacing this language name:',code,langConllFiles[code])
-			#qsdf
-		#print(code,langNames[code])
-	####29:
-	# makeStatsThreaded(langConllFiles, skipFuncs=['root'], skipLangs=[], analysisfolder=analysisfolder, minimal=True)
+
 	#return #print the unknown codes and ' ' at once then stop before makeStatsThreaded, uncomment if nothing printed 
 	makeStatsThreaded(langConllFiles, skipFuncs=['root'], skipLangs=[], analysisfolder=analysisfolder)
+	#makeStatsThreaded(langConllFiles, skipFuncs=['root','compound','fixed','flat','conj','appos', 'vocative', 'expl', 'dislocated', 'discourse', 'dep', 'mot', 'comp','aff', 'list', 'parataxis', 'orphan', 'goeswith', 'reparandum', 'punct', 'mod', 'unk', 'udep', 'det', 'clf', 'case'], skipLangs=[], analysisfolder=analysisfolder)
 	
+def computeMenzerath(langConllFiles, analysisfolder, version):
 	#menzerath
 	print("\nmenzerath begin: \n")
 	menzFile = "Menzerath/longfile/abc.languages.longfile.v{}.tsv".format(version)
@@ -621,20 +479,24 @@ def maincomputation(conlldatafolder, version = ""):
 	
 if __name__ == "__main__":
 	#check if thesefuncs = udfuncs or sudfuncs to adapte with input folder
+	#dict in which key = abbr of langue name, val=relevant files' names 
+	conlldatafolder = "sud-treebanks-v2.11"
+	langConllFiles = getAllConllFiles(conlldatafolder, groupByLanguage=True) 
+	langList = sorted(langConllFiles.keys())
+	analysisfolder = conlldatafolder + '-analysis'
+
+	# gamount = len(langConllFiles)//nbGroup # compute by n group then combine results after
+	# langCode2compute = langList[ gid*gamount:] if gid == nbGroup-1 else langList[gid*gamount : (gid+1)*gamount]
 	
 	thesefuncs = sudfuncs
-	#maincomputation("sud-treebanks-v2.7")
-	#maincomputation("SUD_Ancient_Greek-PROIEL", version = "2.8_sud")
-	maincomputation("sud-treebanks-v2.8", version = "2.8_sud")
+	assert(len(set(thesefuncs)) == len(thesefuncs))
+	# maincomputation("SUD_Beja-NSC", version = "2.8_sud")
+	maincomputation( analysisfolder, langConllFiles)
+	computeMenzerath(langConllFiles, analysisfolder, version = "2.11_sud" )
 
-	thesefuncs = udfuncs
-	#maincomputation("weirdfct",version = "2.8_ud")
-	maincomputation("ud-treebanks-v2.8",version = "2.8_ud")
-
-	#maincomputation("sud2.8part0/czech")
-	#maincomputation("sud2.8part0/japonais")
-	#maincomputation("sud2.8part0/icelandic")
-	#maincomputation("sud2.8part0/russian")
-	#maincomputation("sud2.8part0/german")
-
+	# thesefuncs = udfuncs
+	#maincomputation("weirdfct",version = "2.8_ud_test")
+	#maincomputation("UD_Afrikaans-AfriBooms",version = "2.9_ud_test")
+	
+	# maincomputation("ud-treebanks-v2.10",version = "2.10_ud")
 	#langConllFiles = {a:v for a,v in langConllFiles.iteritems() if "fr" in a}
