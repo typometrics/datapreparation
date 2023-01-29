@@ -208,9 +208,12 @@ def makeStatsOneThread(info):
 				if simpfunc in skipFuncs:
 					break
 				if simpfunc not in thesefuncs: #udfuncs+sudfuncs:
+					print(type(ni))
+					if '.' in str(ni) and simpfunc == '_':
+						break
 					print("\nweird simple function",simpfunc,"    id == ", ni)
-					# print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
 					errorfile.write('\t'.join([simpfunc,conllfile])+'\n')
+					# print("\ntoken id == ", ni, "\nin this sentences: \n ", tree.conllu())
 					#skip=True
 					break
 				for f in funcs:
@@ -472,21 +475,18 @@ def computeMenzerath(langConllFiles, analysisfolder, version):
 if __name__ == "__main__":
 	#check if thesefuncs = udfuncs or sudfuncs to adapte with input folder
 	#dict in which key = abbr of langue name, val=relevant files' names 
-	conlldatafolder = 'test'#"sud-treebanks-v2.11"
+	conlldatafolder = 'test1'#"sud-treebanks-v2.11"
 	langConllFiles = getAllConllFiles(conlldatafolder, groupByLanguage=True) 
 	checkLangCode(langConllFiles)
 	langList = sorted(langConllFiles.keys())
 	langITEM = {la: len(langConllFiles[la]) for la in langList }
 	analysisfolder = conlldatafolder + '-analysis_1'
-
-	# gamount = len(langConllFiles)//nbGroup # compute by n group then combine results after
-	# langCode2compute = langList[ gid*gamount:] if gid == nbGroup-1 else langList[gid*gamount : (gid+1)*gamount]
 	
 	thesefuncs = sudfuncs
 	assert(len(set(thesefuncs)) == len(thesefuncs))
 	# maincomputation("SUD_Beja-NSC", version = "2.8_sud")
 	maincomputation( analysisfolder, langConllFiles)
-	# computeMenzerath(langConllFiles, analysisfolder, version = "2.11_sud" )
+	computeMenzerath(langConllFiles, analysisfolder, version = "2.11_sud" )
 
 	# thesefuncs = udfuncs
 	#maincomputation("weirdfct",version = "2.8_ud_test")
