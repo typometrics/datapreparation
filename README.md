@@ -1,3 +1,17 @@
+
+
+
+# how to use
+* get the latest version of SUD or UD, unzip
+* change the variable *conlldatafolder* in the preprocessing.py file to the name of the folder containing the new conllu files, for example sud-treebanks-v2.11
+* in the last line of the preprocessing.py file, you can provide the maximum Mb size of files that should be split to speed up the processing. recommended value: 15
+* start preprocessing.py: if language codes are missing, the script will stop, and you'll have to complete the .tsv files. Note that the original .conllu files will be erased.
+* change the variable *conlldatafolder* in the statConll_fast.py file to the name of the folder containing the new conllu files. You may want to change also the analysisifolder variable to set the result folder. The variable `thesefuncs` has to be either sudfuncs or udfuncs. in the call of the computeMenzerath function, adapt the version.
+* start statConll_fast.py. This may take some time.
+* copy the resulting folder together with the updated 3 .tsv files at the root of djangotypometrics. Don't forgot to update the language groups in the [tsv2json.py](https://github.com/typometrics/djangotypometrics/blob/master/typometricsapp/tsv2json.py) file in the backend (djangotypometrics)
+
+# structure of the whole typometrics repositories
+
 There are in general 3 repositories in this project:
 ### 1) datapreparation
 * statconll.py & conll.py : analyse and transform .conllu files in *treebank* folder, stock numerical results in .tsv files in an *-analysis* folder
@@ -32,18 +46,6 @@ read the README.md in 3)
 plot data prepared and sent by django
   
   
-(lanch both backend and frontend to run the project)
-
-
-
-# how to use
-* get the latest version of SUD or UD, unzip
-* change the variable *conlldatafolder* in the preprocessing.py file to the name of the folder containing the new conllu files, for example sud-treebanks-v2.11
-* in the last line of the preprocessing.py file, you can provide the maximum Mb size of files that should be split to speed up the processing. recommended value: 15
-* start preprocessing.py: if language codes are missing, the script will stop, and you'll have to complete the .tsv files. Note that the original .conllu files will be erased.
-* change the variable *conlldatafolder* in the statConll_fast.py file to the name of the folder containing the new conllu files. You may want to change also the analysisifolder variable to set the result folder. The variable `thesefuncs` has to be either sudfuncs or udfuncs. in the call of the computeMenzerath function, adapt the version.
-* start statConll_fast.py. This may take some time.
-* copy the resulting folder together with the updated 3 .tsv files at the root of djangotypometrics
-
+(launch both backend and frontend to run the project)
 
 
