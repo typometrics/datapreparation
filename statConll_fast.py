@@ -208,7 +208,7 @@ def makeStatsOneThread(info):
 				if simpfunc in skipFuncs:
 					break
 				if simpfunc not in thesefuncs: #udfuncs+sudfuncs:
-					print(type(ni))
+					# print(type(ni))
 					if '.' in str(ni) and simpfunc == '_':
 						break
 					print("\nweird simple function",simpfunc,"    id == ", ni)

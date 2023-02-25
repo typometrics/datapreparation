@@ -78,7 +78,7 @@ def makeLargeTable(main_dataframe, output_file):
                 data = df[df["headpos"].isin(["NOUN", "PROPN", "ADJ", "ADV", "VERB"])]
 
 
-            print("governor type", x_type, data["type"].value_counts())
+            # print("governor type", x_type, data["type"].value_counts())
 
             # dependent type
             for dep_type in ["any","relevant","content-phrase", "same"]:
